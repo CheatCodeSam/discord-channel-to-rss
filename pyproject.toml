@@ -12,6 +12,9 @@ flask = "^2.2.2"
 peewee = "^3.15.3"
 
 
+[tool.poetry.group.dev.dependencies]
+black = {version = "^22.10.0", allow-prereleases = true}
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

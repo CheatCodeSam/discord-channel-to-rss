@@ -5,33 +5,25 @@ import sqlalchemy
 
 app = Flask(__name__)
 
+messages = []
 
 def flask_thread(func):
     thread = Thread(target=func)
+    thread.daemon = True
     thread.start()
-
-# intents = discord.Intents.default()
-# intents.message_content = True
-
-# client = discord.Client(intents=intents)
 
 class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
 
     async def on_message(self, message):
+        messages.append({"message": message.content})
         print(f'Message from {message.author}: {message.content}')
 
 
 @app.route("/", methods=["GET"])
-def hello_world():
-    items=[]
-    items.append({"name": "carson", "description": "man"})
-    items.append({"name": "dude", "description": "thing"})
-
-    return render_template('rss.xml', items=items)
-
-# app.run()
+def rss():
+    return render_template('rss.xml', items=messages)
 
 flask_thread(func=lambda : app.run())
 

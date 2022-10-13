@@ -1,0 +1,15 @@
+ <?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>The CSE Club</title>
+    <link>https://www.w3schools.com</link>
+    <description>The Cal State San Bernardino Computer Science and Engineering Club</description>
+    {% for item in items %}
+      <item>
+        {% for key, val in item.items() %}
+          <{{ key }}>{{ val }}</{{ key }}>
+        {% endfor %}
+      </item>
+    {% endfor %}
+  </channel>
+</rss> 

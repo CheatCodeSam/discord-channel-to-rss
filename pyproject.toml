@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.10"
 discord-py = "^2.0.1"
 flask = "^2.2.2"
-sqlalchemy = "^1.4.41"
+peewee = "^3.15.3"
 
 
 [build-system]

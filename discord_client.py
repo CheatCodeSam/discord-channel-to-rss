@@ -1,3 +1,4 @@
+from typing import Union
 from xmlrpc.client import boolean
 import discord
 
@@ -5,6 +6,21 @@ from models import Announcement
 from discord import app_commands
 
 MY_GUILD = discord.Object(id=114594673716232197)
+
+channel_to_watch = 0
+
+
+def add_message_to_database(msg: discord.Message):
+    name = msg.author.display_name
+    if isinstance(msg.author, discord.Member):
+        if msg.author.nick:
+            name = msg.author.nick
+    return Announcement.create(
+        message=msg.content,
+        discord_id=msg.id,
+        posted=msg.created_at,
+        author=name,
+    )
 
 
 class admin_client(discord.Client):
@@ -16,8 +32,10 @@ class admin_client(discord.Client):
         print(f"Logged on as {self.user}!")
 
     async def on_message(self, message):
-        print(f"Message from {message.author}: {message.content}")
-        Announcement.create(message=message.content)
+        if message.channel.id == channel_to_watch:
+            if message.author != self.user:
+                if message.content:
+                    add_message_to_database(message)
 
     async def setup_hook(self):
         self.tree.copy_global_to(guild=MY_GUILD)
@@ -25,15 +43,10 @@ class admin_client(discord.Client):
 
 
 intents = discord.Intents.default()
+intents.members = True
 intents.message_content = True
 
 client = admin_client(intents=intents)
-
-
-@client.tree.command()
-async def hello(interaction: discord.Interaction):
-    """Says hello!"""
-    await interaction.response.send_message(f"Hi, {interaction.user.mention}")
 
 
 @client.tree.command()
@@ -41,13 +54,41 @@ async def hello(interaction: discord.Interaction):
 @app_commands.describe(
     channel="The channel that you want to watch.",
     wipe_db="Rather the database should be wiped or not.",
+    inherit="How many previous messages should be added to the database.",
 )
 async def watch(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
     wipe_db: boolean = False,
+    inherit: app_commands.Range[int, 0, 100] = 10,
 ):
     """Starts the RSS bot to watch a channel."""
+    global channel_to_watch
     if wipe_db:
         Announcement.delete().where(True).execute()
-    await interaction.response.send_message(channel.id)
+    messages = [message async for message in channel.history(limit=inherit)]
+    for message in messages:
+        if message.content:
+            add_message_to_database(message)
+    channel_to_watch = channel.id
+    await interaction.response.send_message(
+        f"Now watching {channel.name} for announcements."
+    )
+
+
+@client.tree.context_menu(name="Remove from Announcements")
+async def report_message(interaction: discord.Interaction, message: discord.Message):
+    try:
+        announcment_to_be_delete = Announcement.get(
+            Announcement.discord_id == message.id
+        )
+        announcment_to_be_delete.delete_instance()
+        await interaction.response.send_message(
+            f"This message '{message.id}' by {message.author.mention} has been removed from the database",
+            ephemeral=True,
+        )
+    except:
+        await interaction.response.send_message(
+            f"This message '{message.id}' by {message.author.mention} was not in the database",
+            ephemeral=True,
+        )

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import discord
 from loguru import logger
+from pytz import timezone
 
 
 from models import Announcement, Event
@@ -24,7 +25,7 @@ def add_message_to_database(msg: discord.Message):
     return Announcement.create(
         title=msg.content,
         guid=msg.id,
-        pubDate=msg.created_at,
+        pubDate=msg.created_at.astimezone(timezone("US/Pacific")),
         author=name,
     )
 
@@ -142,12 +143,11 @@ async def create(
 ):
     """Creates an event for the calendar on the website."""
     cal = parsedatetime.Calendar()
-    time_struct, _ = cal.parse(start)
-    start_time = datetime(*time_struct[:6])
+    cal = parsedatetime.Calendar()
+    start_time, _ = cal.parseDT(datetimeString=start, tzinfo=timezone("US/Pacific"))
     end_time = start_time + timedelta(hours=1)
     if ends:
-        time_struct, _ = cal.parse(ends)
-        end_time = datetime(*time_struct[:6])
+        end_time, _ = cal.parseDT(datetimeString=start, tzinfo=timezone("US/Pacific"))
 
     button = discord.ui.Button(label="Delete Event", style=discord.ButtonStyle.danger)
     button.callback = delete_calender_event

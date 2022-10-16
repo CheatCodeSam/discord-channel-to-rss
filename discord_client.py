@@ -45,6 +45,10 @@ class admin_client(discord.Client):
         await self.tree.sync(guild=MY_GUILD)
 
 
+class CalendarEventModel(discord.ui.Modal, title="Calendar Event"):
+    name = discord.ui.View
+
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -75,7 +79,7 @@ async def watch(
             add_message_to_database(message)
     channel_to_watch = channel.id
     await interaction.response.send_message(
-        f"Now watching {channel.name} for announcements."
+        f"Now watching {channel.mention} for announcements."
     )
 
 
@@ -99,16 +103,18 @@ async def remove_from_announcements(
         )
 
 
-async def gen_delete_calender_event(original_interaction: discord.Interaction, id: int):
-    async def delete_calender_event(interaction: discord.Interaction):
-        evnt = Event.get(Event.id == id)
-        evnt.delete_instance()
-        await original_interaction.edit_original_response(
-            content=f"Event '{evnt.title}' has been deleted", view=None
-        )
-        await interaction.response.defer()
+async def delete_calender_event(interaction: discord.Interaction):
+    original_interaction_id = interaction.message.id
 
-    return delete_calender_event
+    try:
+        evnt = Event.get(Event.discord_id == original_interaction_id)
+        evnt.delete_instance()
+    except:
+        print(f"no model exists for {original_interaction_id}")
+
+    message = await interaction.channel.fetch_message(original_interaction_id)
+    await message.edit(content=f"Event '{evnt.title}' has been deleted", view=None)
+    await interaction.response.defer()
 
 
 @client.tree.command()
@@ -134,16 +140,24 @@ async def create(
         time_struct, _ = cal.parse(ends)
         end_time = datetime(*time_struct[:6])
 
-    evnt = Event(title=title, start=start_time, end=end_time, description=description)
-    evnt.save()
-    print(evnt.id)
-
     button = discord.ui.Button(label="Delete Event", style=discord.ButtonStyle.danger)
-    button.callback = await gen_delete_calender_event(interaction, evnt.id)
+    button.callback = delete_calender_event
     delete_view = discord.ui.View()
+    delete_view.timeout = None
     delete_view.add_item(button)
 
     await interaction.response.send_message(
-        f"New event '{title}' created at {start_time} ending at {end_time}",
+        content=f"New event '{title}' created at {start_time} ending at {end_time}",
         view=delete_view,
     )
+
+    original_interaction = await interaction.original_response()
+
+    evnt = Event(
+        discord_id=original_interaction.id,
+        title=title,
+        start=start_time,
+        end=end_time,
+        description=description,
+    )
+    evnt.save()

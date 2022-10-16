@@ -1,3 +1,4 @@
+import json
 from threading import Thread
 from flask import Flask, render_template
 import discord
@@ -16,10 +17,16 @@ def flask_thread(func):
     thread.start()
 
 
-@app.route("/", methods=["GET"])
+@app.route("/rss", methods=["GET"])
 def rss():
-    messages = [announcement for announcement in Announcement.select().dicts()]
+    messages = [announcement for announcement in Announcement.select().dicts()][-10:]
     return render_template("rss.xml", items=messages)
+
+
+@app.route("/events", methods=["GET"])
+def events():
+    events = [announcement for announcement in Event.select().dicts()]
+    return json.dumps(events, indent=4, sort_keys=True, default=str)
 
 
 flask_thread(func=lambda: app.run())

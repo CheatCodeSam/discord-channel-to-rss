@@ -3,7 +3,7 @@ from .database import BaseModel
 
 
 class Announcement(BaseModel):
-    discord_id = peewee.BigIntegerField(null=False, unique=True)
-    message = peewee.TextField()
-    posted = peewee.DateTimeField()
+    guid = peewee.BigIntegerField(null=False, unique=True)
+    title = peewee.TextField()
+    pubDate = peewee.DateTimeField()
     author = peewee.TextField()

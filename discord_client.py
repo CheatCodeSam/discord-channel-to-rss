@@ -22,9 +22,9 @@ def add_message_to_database(msg: discord.Message):
         if msg.author.nick:
             name = msg.author.nick
     return Announcement.create(
-        message=msg.content,
-        discord_id=msg.id,
-        posted=msg.created_at,
+        title=msg.content,
+        guid=msg.id,
+        pubDate=msg.created_at,
         author=name,
     )
 
@@ -40,8 +40,7 @@ class admin_client(discord.Client):
     async def on_message(self, message):
         if message.channel.id == channel_to_watch:
             if message.author != self.user:
-                if message.content:
-                    add_message_to_database(message)
+                add_message_to_database(message)
 
     async def setup_hook(self):
         self.tree.copy_global_to(guild=MY_GUILD)
@@ -93,9 +92,7 @@ async def remove_from_announcements(
     interaction: discord.Interaction, message: discord.Message
 ):
     try:
-        announcment_to_be_delete = Announcement.get(
-            Announcement.discord_id == message.id
-        )
+        announcment_to_be_delete = Announcement.get(Announcement.guid == message.id)
         announcment_to_be_delete.delete_instance()
         await interaction.response.send_message(
             f"This message '{message.id}' by {message.author.mention} has been removed from the database",

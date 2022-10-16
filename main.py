@@ -24,7 +24,7 @@ def flask_thread(func):
     thread.start()
 
 
-@app.route("/rss", methods=["GET"])
+@app.route("/feed/", methods=["GET"])
 def rss():
     messages = [announcement for announcement in Announcement.select().dicts()][-10:]
     return render_template("rss.xml", items=messages)

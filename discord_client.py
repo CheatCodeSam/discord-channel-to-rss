@@ -1,3 +1,4 @@
+from cmath import log
 from datetime import datetime, timedelta
 from typing import Optional
 import discord
@@ -30,6 +31,19 @@ def add_message_to_database(msg: discord.Message):
     )
 
 
+def edit_message_in_database_if_needed(before: discord.Message, after: discord.Message):
+    try:
+        announcment_to_be_modified = Announcement.get(Announcement.guid == before.id)
+        announcment_to_be_modified.title = after.content
+        announcment_to_be_modified.guid = after.id
+        announcment_to_be_modified.save()
+        logger.info(
+            f"Message {before.id} has been updated from '{before.content}' to '{after.content}'"
+        )
+    except:
+        logger.warning(f"Message {before.id} is not stored in announcements database.")
+
+
 class admin_client(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -42,6 +56,10 @@ class admin_client(discord.Client):
         if message.channel.id == channel_to_watch:
             if message.author != self.user:
                 add_message_to_database(message)
+
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if before.channel.id == channel_to_watch:
+            edit_message_in_database_if_needed(before, after)
 
     async def setup_hook(self):
         self.tree.copy_global_to(guild=MY_GUILD)

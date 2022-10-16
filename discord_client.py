@@ -1,9 +1,12 @@
-from typing import Union
+from code import interact
+from datetime import datetime, timedelta
+from typing import Optional, Union
 from xmlrpc.client import boolean
 import discord
 
 from models import Announcement
-from discord import app_commands
+from discord import Interaction, app_commands
+import parsedatetime
 
 MY_GUILD = discord.Object(id=114594673716232197)
 
@@ -77,7 +80,9 @@ async def watch(
 
 
 @client.tree.context_menu(name="Remove from Announcements")
-async def report_message(interaction: discord.Interaction, message: discord.Message):
+async def remove_from_announcements(
+    interaction: discord.Interaction, message: discord.Message
+):
     try:
         announcment_to_be_delete = Announcement.get(
             Announcement.discord_id == message.id
@@ -92,3 +97,48 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
             f"This message '{message.id}' by {message.author.mention} was not in the database",
             ephemeral=True,
         )
+
+
+async def gen_delete_calender_event(original_interaction: discord.Interaction):
+    async def delete_calender_event(interaction: discord.Interaction):
+        await original_interaction.edit_original_response(
+            content="Event deleted", view=None
+        )
+        await interaction.response.defer()
+        print("delete!")
+
+    return delete_calender_event
+
+
+@client.tree.command()
+@app_commands.describe(
+    title="Event title",
+    start="Event date and time",
+    ends="When event ends",
+    description="Addtional information about the event",
+)
+async def create(
+    interaction: discord.Interaction,
+    title: str,
+    start: str,
+    ends: Optional[str],
+    description: Optional[str],
+):
+    """Creates an event for the calendar on the website."""
+    cal = parsedatetime.Calendar()
+    time_struct, _ = cal.parse(start)
+    start_time = datetime(*time_struct[:6])
+    end_time = start_time + timedelta(hours=1)
+    if ends:
+        time_struct, _ = cal.parse(ends)
+        end_time = datetime(*time_struct[:6])
+
+    button = discord.ui.Button(label="Delete Event", style=discord.ButtonStyle.danger)
+    button.callback = await gen_delete_calender_event(interaction)
+    url_view = discord.ui.View()
+    url_view.add_item(button)
+
+    await interaction.response.send_message(
+        f"New event '{title}' created at {start_time} ending at {end_time}",
+        view=url_view,
+    )

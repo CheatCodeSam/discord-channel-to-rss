@@ -1,11 +1,11 @@
-from code import interact
 from datetime import datetime, timedelta
-from typing import Optional, Union
-from xmlrpc.client import boolean
+from typing import Optional
 import discord
+from loguru import logger
+
 
 from models import Announcement, Event
-from discord import Interaction, app_commands
+from discord import app_commands
 import parsedatetime
 
 MY_GUILD = discord.Object(id=114594673716232197)
@@ -14,6 +14,9 @@ channel_to_watch = 0
 
 
 def add_message_to_database(msg: discord.Message):
+    logger.info(
+        f"Message with discord id of {msg.id} was added to the database as Announcment."
+    )
     name = msg.author.display_name
     if isinstance(msg.author, discord.Member):
         if msg.author.nick:
@@ -32,7 +35,7 @@ class admin_client(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def on_ready(self):
-        print(f"Logged on as {self.user}!")
+        logger.info(f"Logged on as {self.user}!")
 
     async def on_message(self, message):
         if message.channel.id == channel_to_watch:
@@ -66,13 +69,14 @@ client = admin_client(intents=intents)
 async def watch(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
-    wipe_db: boolean = False,
+    wipe_db: bool = False,
     inherit: app_commands.Range[int, 0, 100] = 10,
 ):
     """Starts the RSS bot to watch a channel."""
     global channel_to_watch
     if wipe_db:
         Announcement.delete().where(True).execute()
+        logger.info("Announcements have been wiped from the database.")
     messages = [message async for message in channel.history(limit=inherit)]
     for message in messages:
         if message.content:
@@ -81,6 +85,7 @@ async def watch(
     await interaction.response.send_message(
         f"Now watching {channel.mention} for announcements."
     )
+    logger.info(f"Now watching {channel.mention} for announcements.")
 
 
 @client.tree.context_menu(name="Remove from Announcements")
@@ -96,21 +101,28 @@ async def remove_from_announcements(
             f"This message '{message.id}' by {message.author.mention} has been removed from the database",
             ephemeral=True,
         )
+        logger.info(
+            f"This message '{message.id}' by {message.author.mention} has been removed from the database",
+        )
     except:
         await interaction.response.send_message(
             f"This message '{message.id}' by {message.author.mention} was not in the database",
             ephemeral=True,
         )
+        logger.error(
+            f"This message '{message.id}' by {message.author.mention} was not in the database",
+        )
 
 
 async def delete_calender_event(interaction: discord.Interaction):
     original_interaction_id = interaction.message.id
-
+    logger.debug(f"Attempting to delete event '{original_interaction_id}'")
     try:
         evnt = Event.get(Event.discord_id == original_interaction_id)
         evnt.delete_instance()
+        logger.info(f"Calendar event '{original_interaction_id}' deleted")
     except:
-        print(f"no model exists for {original_interaction_id}")
+        logger.error(f"No Calendar Event model exists for {original_interaction_id}")
 
     message = await interaction.channel.fetch_message(original_interaction_id)
     await message.edit(content=f"Event '{evnt.title}' has been deleted", view=None)
@@ -153,11 +165,14 @@ async def create(
 
     original_interaction = await interaction.original_response()
 
-    evnt = Event(
+    logger.info(
+        f"New event '{title}' created at {start_time} ending at {end_time} with id '{original_interaction.id}'"
+    )
+
+    evnt = Event.create(
         discord_id=original_interaction.id,
         title=title,
         start=start_time,
         end=end_time,
         description=description,
     )
-    evnt.save()

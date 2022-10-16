@@ -1,12 +1,19 @@
 import json
 from threading import Thread
 from flask import Flask, render_template
-import discord
+from loguru import logger
 from models import Event, db, Announcement
 from discord_client import client
 
-app = Flask(__name__)
 
+app = Flask(__name__)
+logger.start(
+    "log.log",
+    level="DEBUG",
+    format="{time} {level} {message}",
+    backtrace=True,
+    rotation="25 MB",
+)
 db.connect()
 db.create_tables([Announcement, Event])
 

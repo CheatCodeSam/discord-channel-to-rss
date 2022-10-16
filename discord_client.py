@@ -1,6 +1,7 @@
 from cmath import log
 from datetime import datetime, timedelta
 from typing import Optional
+from black import out
 import discord
 from loguru import logger
 from pytz import timezone
@@ -44,6 +45,21 @@ def edit_message_in_database_if_needed(before: discord.Message, after: discord.M
         logger.warning(f"Message {before.id} is not stored in announcements database.")
 
 
+def remove_model_from_announcements(message: discord.Message):
+    try:
+        announcment_to_be_delete = Announcement.get(Announcement.guid == message.id)
+        announcment_to_be_delete.delete_instance()
+        logger.info(
+            f"This message '{message.id}' by {message.author.mention} has been removed from the database",
+        )
+        return True
+    except:
+        logger.error(
+            f"This message '{message.id}' by {message.author.mention} was not in the database",
+        )
+        return False
+
+
 class admin_client(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -60,6 +76,10 @@ class admin_client(discord.Client):
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.channel.id == channel_to_watch:
             edit_message_in_database_if_needed(before, after)
+
+    async def on_message_delete(self, message):
+        if message.channel.id == channel_to_watch:
+            remove_model_from_announcements(message)
 
     async def setup_hook(self):
         self.tree.copy_global_to(guild=MY_GUILD)
@@ -110,23 +130,16 @@ async def watch(
 async def remove_from_announcements(
     interaction: discord.Interaction, message: discord.Message
 ):
-    try:
-        announcment_to_be_delete = Announcement.get(Announcement.guid == message.id)
-        announcment_to_be_delete.delete_instance()
+    output = remove_model_from_announcements(message)
+    if output:
         await interaction.response.send_message(
             f"This message '{message.id}' by {message.author.mention} has been removed from the database",
             ephemeral=True,
         )
-        logger.info(
-            f"This message '{message.id}' by {message.author.mention} has been removed from the database",
-        )
-    except:
+    else:
         await interaction.response.send_message(
             f"This message '{message.id}' by {message.author.mention} was not in the database",
             ephemeral=True,
-        )
-        logger.error(
-            f"This message '{message.id}' by {message.author.mention} was not in the database",
         )
 
 

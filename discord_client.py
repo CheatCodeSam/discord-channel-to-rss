@@ -4,7 +4,7 @@ from typing import Optional, Union
 from xmlrpc.client import boolean
 import discord
 
-from models import Announcement
+from models import Announcement, Event
 from discord import Interaction, app_commands
 import parsedatetime
 
@@ -99,13 +99,14 @@ async def remove_from_announcements(
         )
 
 
-async def gen_delete_calender_event(original_interaction: discord.Interaction):
+async def gen_delete_calender_event(original_interaction: discord.Interaction, id: int):
     async def delete_calender_event(interaction: discord.Interaction):
+        evnt = Event.get(Event.id == id)
+        evnt.delete_instance()
         await original_interaction.edit_original_response(
-            content="Event deleted", view=None
+            content=f"Event '{evnt.title}' has been deleted", view=None
         )
         await interaction.response.defer()
-        print("delete!")
 
     return delete_calender_event
 
@@ -133,12 +134,16 @@ async def create(
         time_struct, _ = cal.parse(ends)
         end_time = datetime(*time_struct[:6])
 
+    evnt = Event(title=title, start=start_time, end=end_time, description=description)
+    evnt.save()
+    print(evnt.id)
+
     button = discord.ui.Button(label="Delete Event", style=discord.ButtonStyle.danger)
-    button.callback = await gen_delete_calender_event(interaction)
-    url_view = discord.ui.View()
-    url_view.add_item(button)
+    button.callback = await gen_delete_calender_event(interaction, evnt.id)
+    delete_view = discord.ui.View()
+    delete_view.add_item(button)
 
     await interaction.response.send_message(
         f"New event '{title}' created at {start_time} ending at {end_time}",
-        view=url_view,
+        view=delete_view,
     )

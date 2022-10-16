@@ -11,6 +11,7 @@ discord-py = "^2.0.1"
 flask = "^2.2.2"
 peewee = "^3.15.3"
 parsedatetime = "^2.6"
+pytz = "^2022.4"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,13 +1,13 @@
 from threading import Thread
 from flask import Flask, render_template
 import discord
-from models import db, Announcement
+from models import Event, db, Announcement
 from discord_client import client
 
 app = Flask(__name__)
 
 db.connect()
-db.create_tables([Announcement])
+db.create_tables([Announcement, Event])
 
 
 def flask_thread(func):

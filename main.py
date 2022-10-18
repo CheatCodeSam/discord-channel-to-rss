@@ -39,7 +39,7 @@ def events():
     return json.dumps(events, indent=4, sort_keys=True, default=str)
 
 
-flask_thread(func=lambda: serve(app, host="0.0.0.0", port=8088))
+flask_thread(func=lambda: serve(app, host="0.0.0.0", port=8888))
 
 
 client.run("MTAyOTkxMDg4NTU3MDk5MDEzMA.GzgQQ7.xUGsI02u9XKY4d6tSz7756uXqBXYpKx7A2mEC4")

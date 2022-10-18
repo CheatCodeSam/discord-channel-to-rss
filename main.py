@@ -5,11 +5,13 @@ from loguru import logger
 from models import Event, db, Announcement
 from discord_client import client
 from waitress import serve
+from flask_cors import CORS
 
 
 
 
 app = Flask(__name__)
+CORS(app)
 logger.start(
     "log.log",
     level="DEBUG",

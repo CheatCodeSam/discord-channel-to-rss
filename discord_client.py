@@ -4,13 +4,14 @@ from typing import Optional
 import discord
 from loguru import logger
 from pytz import timezone
+import os
 
 
 from models import Announcement, Event
 from discord import app_commands
 import parsedatetime
 
-MY_GUILD = discord.Object(id=114594673716232197)
+MY_GUILD = discord.Object(id=int(os.getenv("GUILD_ID","114594673716232197")))
 
 channel_to_watch = 0
 
@@ -70,7 +71,8 @@ class admin_client(discord.Client):
     async def on_message(self, message):
         if message.channel.id == channel_to_watch:
             if message.author != self.user:
-                add_message_to_database(message)
+                if message.content:
+                    add_message_to_database(message)
 
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.channel.id == channel_to_watch:
